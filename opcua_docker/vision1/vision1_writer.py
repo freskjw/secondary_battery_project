@@ -5,6 +5,7 @@ from asyncua import Client, ua
 UA_ENDPOINT = os.getenv("UA_ENDPOINT", "opc.tcp://opcua-server:4840/inspect/server/")
 NS_URI      = os.getenv("UA_NAMESPACE", "http://inspect.system")
 INTERVAL    = float(os.getenv("V1_INTERVAL", 2.0))
+USE_SIM = os.getenv("USE_SIMULATION", "true").lower() == "true"
 
 async def main():
     cli = Client(UA_ENDPOINT)
@@ -32,11 +33,17 @@ async def main():
     flag_node   = cli.get_node(f"ns={idx};s=TriggerFlag")
 
     print(f"✔ Vision1 writer 준비 완료 (주기 {INTERVAL}s)")
-
+    
     try:
         while True:
-            angle  = round(random.uniform(-5, 5), 2)
-            result = random.choice(["OK", "NG"])
+            if USE_SIM:
+                angle  = round(random.uniform(-5, 5), 2)
+                result = random.choice(["OK", "NG"])
+            else:
+                # 실제 머신 비전 처리 후 데이터 받는 코드 (자체 Vision API 혹은 OpenCV 코드로 교체)
+                #frame = capture_frame()
+                #angle, result = vision_inspect(frame)
+                angle, result = get_real_vision1()  # 예시 함수
 
             await angle_node.write_value( ua.Variant(angle,  ua.VariantType.Float) )
             await result_node.write_value( ua.Variant(result, ua.VariantType.String) )

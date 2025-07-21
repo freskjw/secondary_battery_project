@@ -8,7 +8,7 @@ UA_ENDPOINT = os.getenv(
 )
 NS_URI      = os.getenv("UA_NAMESPACE", "http://inspect.system")
 INTERVAL    = float(os.getenv("V2_INTERVAL", 2.0))
-
+USE_SIM     = os.getenv("USE_SIMULATION", "true").lower() == "true"
 
 async def main() -> None:
     # 1) 서버 연결 재시도 루프
@@ -27,7 +27,13 @@ async def main() -> None:
 
                 # 2) 정상 연결되면 쓰기 루프 진입
                 while True:
-                    result = random.choice(["OK", "NG"])
+                    if USE_SIM:
+                        result = random.choice(["OK", "NG"])
+                    else:
+                        # 실제 머신 비전 처리 후 데이터 받는 코드 (자체 Vision API 혹은 OpenCV 코드로 교체)
+                        #frame = capture_frame()
+                        #angle, result = vision_inspect(frame)
+                        result = get_real_vision2()  # 예시 함수
 
                     await result_node.write_value(ua.Variant(result, ua.VariantType.String))
                     await flag_node.write_value(ua.Variant(True,   ua.VariantType.Boolean))

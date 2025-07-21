@@ -8,3 +8,6 @@ python-dotenv
 
 # PLC 통신
 pymcprotocol
+
+# 공정능력 계산
+numpy

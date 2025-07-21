@@ -72,5 +72,16 @@ services:
     depends_on:
       - opcua-server
 
+  cp-calculator:
+    build:
+      context: .
+      dockerfile: cp-calculator/Dockerfile
+    container_name: cp-calculator
+    env_file: ./config.env
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+
 volumes:
   db_data:
