@@ -1,0 +1,10 @@
+# OPC UA 통신
+asyncua         # async/await 기반 OPC UA Server/Client
+# opcua         # 불필요 (asyncua가 대체)
+
+# DB 연결
+mysql-connector-python
+python-dotenv
+
+# PLC 통신
+pymcprotocol
