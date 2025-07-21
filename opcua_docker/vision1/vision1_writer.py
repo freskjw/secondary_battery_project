@@ -1,37 +1,51 @@
+# vision1_writer.py
 import asyncio, os, random, time
-from asyncua import Client
+from asyncua import Client, ua
 
-# 환경 설정
 UA_ENDPOINT = os.getenv("UA_ENDPOINT", "opc.tcp://opcua-server:4840/inspect/server/")
-NS_URI = os.getenv("UA_NAMESPACE", "http://inspect.system")
-INTERVAL = float(os.getenv("V1_INTERVAL", 2.0))
+NS_URI      = os.getenv("UA_NAMESPACE", "http://inspect.system")
+INTERVAL    = float(os.getenv("V1_INTERVAL", 2.0))
 
 async def main():
-    async with Client(UA_ENDPOINT) as cli:
-        # 네임스페이스 인덱스 동적 확보
-        idx = await cli.get_namespace_index(NS_URI)
-        
-        insp_obj            = await cli.nodes.objects.get_child([f"{idx}:InspectSystem"])
-        angle_node   = await insp_obj.get_child([f"{idx}:Angle"])
-        result_node  = await insp_obj.get_child([f"{idx}:Vision1Result"])
-        flag_node    = await insp_obj.get_child([f"{idx}:TriggerFlag"])
-        
-        print(f" Vision-1 writer 연결 완료 -> {UA_ENDPOINT}")
-        
+    cli = Client(UA_ENDPOINT)
+
+    # 1) 서버가 준비될 때까지 최대 30초 재시도
+    for i in range(30):
+        try:
+            await cli.connect()
+            print(f"✔ OPC UA 서버에 연결됨 → {UA_ENDPOINT}")
+            break
+        except OSError:
+            print(f"❗ 연결 실패, 1초 뒤 재시도… ({i+1}/30)")
+            await asyncio.sleep(1)
+    else:
+        print("❌ 서버 연결 실패, 종료합니다.")
+        return
+
+    # 2) 네임스페이스 인덱스 가져오기
+    idx = await cli.get_namespace_index(NS_URI)
+    print(f"▶ 네임스페이스 {NS_URI} 의 인덱스 = {idx}")
+
+    # 3) NodeId 문자열로 바로 변수 노드 얻기
+    angle_node  = cli.get_node(f"ns={idx};s=Angle")
+    result_node = cli.get_node(f"ns={idx};s=Vision1Result")
+    flag_node   = cli.get_node(f"ns={idx};s=TriggerFlag")
+
+    print(f"✔ Vision1 writer 준비 완료 (주기 {INTERVAL}s)")
+
+    try:
         while True:
-            # ---- 가상 계측값 생성 ----
-            angle  = round(random.uniform(-5, 5), 2)          # ±5 deg
+            angle  = round(random.uniform(-5, 5), 2)
             result = random.choice(["OK", "NG"])
-            
-            # ---- 값 쓰기 (데이터타입 맞춤) ----
-            await angle_node.write_value(ua.Variant(angle,  ua.VariantType.Float))
-            await result_node.write_value(ua.Variant(result, ua.VariantType.String))
-            await flag_node.write_value(ua.Variant(True,   ua.VariantType.Boolean))
-            
-            print(f"[Vision-1] {time.strftime('%H:%M:%S')}  "
-                  f"angle={angle:5.2f}°,  result={result}")
-            
+
+            await angle_node.write_value( ua.Variant(angle,  ua.VariantType.Float) )
+            await result_node.write_value( ua.Variant(result, ua.VariantType.String) )
+            await flag_node.write_value(   ua.Variant(True,   ua.VariantType.Boolean) )
+
+            print(f"[Vision-1] {time.strftime('%H:%M:%S')}  angle={angle:+5.2f}°, result={result}")
             await asyncio.sleep(INTERVAL)
-            
+    finally:
+        await cli.disconnect()
+
 if __name__ == "__main__":
     asyncio.run(main())

@@ -5,12 +5,14 @@ from asyncua import Server, ua
 
 async def main():
     try:
-        ENDPOINT = os.getenv("UA_ENDPOINT", "opc.tcp://0.0.0.0:4840/inspect/server/")
+        LISTEN_ENDPOINT = os.getenv("UA_LISTEN_ENDPOINT","opc.tcp://0.0.0.0:4840/inspect/server/")
+        CLIENT_ENDPOINT = os.getenv("UA_ENDPOINT","opc.tcp://opcua-server:4840/inspect/server/")
+
         NS_URI = os.getenv("UA_NAMESPACE", "http://inspect.system")
 
         server = Server()
         await server.init()
-        server.set_endpoint(ENDPOINT)
+        server.set_endpoint(LISTEN_ENDPOINT)       # 모든 인터페이스에 리슨
         server.set_server_name("Battery Inspection OPC UA")
         server.set_security_policy([ua.SecurityPolicyType.NoSecurity])
 
@@ -31,6 +33,7 @@ async def main():
         for name, (val, vtype) in init_vars.items():
             print(f"  - 변수 생성 중: {name}")
             nodeid = ua.NodeId(name, idx)
+            name   = ua.QualifiedName(name, idx)
             var = await inspect.add_variable(
                 nodeid,
                 name,
@@ -38,7 +41,7 @@ async def main():
             )
             await var.set_writable()
 
-        print(f"✅ OPC UA 서버 기동 -> {ENDPOINT}",flush=True)
+        print(f"✅ OPC UA 서버 기동 -> {LISTEN_ENDPOINT}",flush=True)
         print(f"✅ namespace uri  = {NS_URI}",flush=True)
         print(f"✅ variables      = {', '.join(init_vars.keys())}",flush=True)
 

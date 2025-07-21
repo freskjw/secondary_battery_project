@@ -1,69 +1,76 @@
 services:
   mysql:
-    image : mysql:8.4
-    restart : unless-stopped
-    ports : ["3306:3306"]
+    image: mysql:8.4
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD : projectteam2@@
-      MYSQL_DATABASE : secondary_battery_db
-      MYSQL_USER : root2
-      MYSQL_PASSWORD : projectteam2@
+      MYSQL_ROOT_PASSWORD: "projectteam2@@"
+      MYSQL_DATABASE: "secondary_battery_db"
+      MYSQL_USER: "root2"
+      MYSQL_PASSWORD: "projectteam2@"
     volumes:
       - db_data:/var/lib/mysql
       - ./mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   opcua-server:
     build:
-      context : .
-      dockerfile : opcua-server/Dockerfile
-    container_name : opcua-server
-    hostname : opcua-server
-    env_file : ./config.env
-    restart : unless-stopped
-    ports : ["4840:4840"]
-    depends_on : [mysql]
+      context: .
+      dockerfile: opcua-server/Dockerfile
+    container_name: opcua-server
+    hostname: opcua-server
+    env_file: ./config.env
+    restart: unless-stopped
+    ports:
+      - "4840:4840"
+    depends_on:
+      mysql:
+        condition: service_healthy   # MySQL 컨테이너가 ‘healthcheck: OK’ 상태가 될 때까지 대기
 
   opcua-bridge:
     build:
       context: .
-      dockerfile : opcua-bridge/Dockerfile
-    container_name : opcua-bridge
-    env_file : ./config.env
-    restart : unless-stopped
+      dockerfile: opcua-bridge/Dockerfile
+    container_name: opcua-bridge
+    env_file: ./config.env
+    restart: unless-stopped
     depends_on:
-      - mysql
-      - opcua-server
-      
+      - opcua-server              # 시작 순서만 보장
 
   plc-voltage:
     build:
       context: .
-      dockerfile : plc-voltage/Dockerfile
-    container_name : plc-voltage
-    env_file : config.env
-    restart : unless-stopped
+      dockerfile: plc-voltage/Dockerfile
+    container_name: plc-voltage
+    env_file: ./config.env
+    restart: unless-stopped
     depends_on:
       - opcua-server
 
   vision1-writer:
     build:
-      context : .
-      dockerfile : vision1/Dockerfile
-    container_name : vision1-writer
-    env_file : ./config.env
+      context: .
+      dockerfile: vision1/Dockerfile
+    container_name: vision1-writer
+    env_file: ./config.env
+    restart: unless-stopped
     depends_on:
       - opcua-server
-    restart : unless-stopped
 
   vision2-writer:
     build:
-     context : .
-     dockerfile : vision2/Dockerfile
-    container_name : vision2-writer
-    env_file : ./config.env
+      context: .
+      dockerfile: vision2/Dockerfile
+    container_name: vision2-writer
+    env_file: ./config.env
+    restart: unless-stopped
     depends_on:
       - opcua-server
-    restart : unless-stopped
 
 volumes:
-  db_data : {}
+  db_data:

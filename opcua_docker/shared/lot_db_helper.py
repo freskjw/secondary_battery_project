@@ -17,7 +17,8 @@ from typing import Literal, Mapping
 
 from dotenv import load_dotenv
 import mysql.connector
-from mysql.connector import pooling, MySQLConnection, Cursor
+from mysql.connector import pooling, MySQLConnection
+from mysql.connector.cursor import MySQLCursor
 
 # 1. 환경 변수 로드
 # ──────────────────────────────────────────────────────────────────────────
@@ -43,7 +44,7 @@ POOL = pooling.MySQLConnectionPool(
 )
 
 @contextmanager
-def get_conn_cursor() -> tuple[MySQLConnection, Cursor]:
+def get_conn_cursor() -> tuple[MySQLConnection, MySQLCursor]:
     """
     with 블록으로 (conn, cur) 제공 → 자동 commit / rollback / close
     """
@@ -67,7 +68,7 @@ PREFIX_MAP: dict[str, str] = {
 }
 
 
-def _next_lot(cur: Cursor, module_type: str) -> str:
+def _next_lot(cur: MySQLCursor, module_type: str) -> str:
     """
     LOT 번호 생성 (행 잠금)
     - module_type ∈ {"2x3", "2x4"}
