@@ -1,6 +1,7 @@
 # cp-calculator/Dockerfile
 
 FROM python:3.11-slim
+ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # 1) shared/requirements.txt 를 복사
@@ -11,4 +12,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY cp-calculator/cp_calculator.py ./cp_calculator.py
 COPY config.env ./config.env
 
-CMD ["python", "cp_calculator.py"]
+CMD ["python","-u","cp_calculator.py"]

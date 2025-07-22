@@ -23,14 +23,6 @@ CREATE TABLE IF NOT EXISTS module_process_log (
   FOREIGN KEY (module_type) REFERENCES lot_tracker(module_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 공정 능력 지표 로그
-CREATE TABLE IF NOT EXISTS process_capability (
-  calc_time   DATETIME    PRIMARY KEY,
-  module_type VARCHAR(10),
-  cp_voltage  FLOAT,
-  cpk_voltage FLOAT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 -- vision1 검사 결과 로그 테이블
 CREATE TABLE IF NOT EXISTS vision1_log (
     id INT AUTO_INCREMENT PRIMARY KEY,

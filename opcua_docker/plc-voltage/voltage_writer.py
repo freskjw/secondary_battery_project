@@ -9,9 +9,9 @@ from asyncua import Client, ua
 # ---------- 0) 설정 로드 ----------
 load_dotenv("config.env")
 
-PLC_IP       = os.getenv("PLC_IP",      "192.168.0.10")
-PLC_PORT     = int(os.getenv("PLC_PORT", "5001"))
-PLC_DEVICE   = os.getenv("PLC_DEVICE",  "D100")
+PLC_IP       = os.getenv("PLC_IP",      "192.168.3.30")
+PLC_PORT     = int(os.getenv("PLC_PORT", "6001"))
+PLC_DEVICE   = os.getenv("PLC_DEVICE",  "D200")
 SCALE        = float(os.getenv("VOLT_SCALE", "0.001"))
 
 UA_ENDPOINT  = os.getenv("UA_ENDPOINT",
