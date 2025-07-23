@@ -1,7 +1,7 @@
 import asyncio, os, random, time
 from asyncua import Client, ua
 
-# ---------- 1) 환경 설정 ----------
+# ---------- 1) 환경 설정 -----------
 UA_ENDPOINT = os.getenv(
     "UA_ENDPOINT",
     "opc.tcp://opcua-server:4840/inspect/server/"   # compose 네트워크에서 서비스명 사용

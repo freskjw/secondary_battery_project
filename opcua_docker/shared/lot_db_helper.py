@@ -6,7 +6,7 @@ Vision · 전압 결과를 INSERT / UPDATE 합니다.
 
 * .env / config.env 로 DB 접속 정보 주입
 * SELECT … FOR UPDATE 로 LOT 중복 방지
-* Connection Pool 로 컨테이너 다중-스레드 접근 최적화
+* Connection Pool 로 컨테이너 다중-스레드 접근 최적화.
 """
 
 from __future__ import annotations

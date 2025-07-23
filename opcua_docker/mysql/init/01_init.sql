@@ -1,4 +1,4 @@
--- LOT 시리얼 관리 테이블
+-- LOT 시리얼 관리 테이블, 시리얼 번호
 CREATE TABLE IF NOT EXISTS lot_tracker (
   module_type   VARCHAR(10) PRIMARY KEY,
   last_serial   INT NOT NULL

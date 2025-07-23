@@ -1,4 +1,5 @@
 # opcua_server.py
+# OPC UA Server 생성
 import asyncio
 import os
 from asyncua import Server, ua

@@ -1,4 +1,5 @@
 # vision1_writer.py
+# 비전 값 쓰기
 import asyncio, os, random, time
 from asyncua import Client, ua
 

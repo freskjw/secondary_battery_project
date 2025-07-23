@@ -1,4 +1,5 @@
 # cp_calculator.py
+# 공정값 Cp, Cpk 계산
 
 import time
 import os

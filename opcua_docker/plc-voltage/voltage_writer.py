@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from pymcprotocol import Type3E
 from asyncua import Client, ua
 
+#
 # ---------- 0) 설정 로드 ----------
 load_dotenv("config.env")
 

@@ -4,6 +4,7 @@ OPC UA → MySQL Bridge
 InspectSystem/TriggerFlag 가 True 로 바뀌면
   - Angle · Vision1Result · Vision2Result · Voltage · VoltageResult 값을 읽어
     lot_db_helper 헬퍼 함수로 DB 반영
+    OPC UA Client
 """
 
 import asyncio

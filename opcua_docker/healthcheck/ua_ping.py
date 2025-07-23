@@ -1,5 +1,6 @@
 # ────────────────────────────────
 # healthcheck/ua_ping.py
+# 서버 연결 체크
 # ────────────────────────────────
 import os
 from asyncua import Client

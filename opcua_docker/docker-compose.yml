@@ -40,7 +40,7 @@ services:
     env_file: ./config.env
     restart: unless-stopped
     depends_on:
-      - opcua-server              # 시작 순서만 보장
+      - opcua-server              # 시작 순서만 보장.
 
   plc-voltage:
     build:
