@@ -1,63 +1,41 @@
 """
 LOT / 공정이력 DB Helper
 ------------------------
-MySQL(MariaDB) 연결 풀을 사용해 트랜잭션-단위로 LOT 번호를 발급하고
-Vision · 전압 결과를 INSERT / UPDATE 합니다.
-
-* .env / config.env 로 DB 접속 정보 주입
-* SELECT … FOR UPDATE 로 LOT 중복 방지
-* Connection Pool 로 컨테이너 다중-스레드 접근 최적화.
+* 기존 insert_vision1 / update_vision2 / update_voltage 그대로 유지
+* ★ upsert_process_log(lot, ...) 함수 추가  → LotNo 기반 부분 UPDATE
 """
 
 from __future__ import annotations
-
-import os, datetime
+import os
 from contextlib import contextmanager
-from typing import Literal, Mapping
-
+from typing import Mapping, Literal
 from dotenv import load_dotenv
-import mysql.connector
 from mysql.connector import pooling, MySQLConnection
 from mysql.connector.cursor import MySQLCursor
 
-# 1. 환경 변수 로드
-# ──────────────────────────────────────────────────────────────────────────
+# ─────────────────── 1) 환경 변수
 load_dotenv("config.env")
+DB_CONFIG: Mapping[str, str | int] = {
+    "host":     os.getenv("DB_HOST","mysql"),
+    "port":     int(os.getenv("DB_PORT",3306)),
+    "user":     os.getenv("DB_USER","root2"),
+    "password": os.getenv("DB_PW","projectteam2@"),
+    "database": os.getenv("DB_NAME","secondary_battery_db"),
+    "charset":  "utf8mb4",
+    "autocommit":False,
+}
 
-DB_CONFIG: Mapping[str, str | int] = dict(
-    host        = os.getenv("DB_HOST", "mysql"),
-    port        = int(os.getenv("DB_PORT", "3306")),
-    user        = os.getenv("DB_USER", "root2"),
-    password    = os.getenv("DB_PW",   "projectteam2@"),
-    database    = os.getenv("DB_NAME", "secondary_battery_db"),
-    charset     = "utf8mb4",
-    autocommit  = False,  # 트랜잭션 수동 제어
-)
-
-# 2. 연결 풀 (5개 기본)
-# ──────────────────────────────────────────────────────────────────────────
-POOL = pooling.MySQLConnectionPool(
-    pool_name         = os.getenv("DB_POOL_NAME",  "LOT_POOL"),
-    pool_size         = int(os.getenv("DB_POOL_SIZE", "5")),
-    pool_reset_session= True,
-    **DB_CONFIG,
-)
+POOL = pooling.MySQLConnectionPool(pool_name="LOT_POOL", pool_size=5, **DB_CONFIG)
 
 @contextmanager
 def get_conn_cursor() -> tuple[MySQLConnection, MySQLCursor]:
-    """
-    with 블록으로 (conn, cur) 제공 → 자동 commit / rollback / close
-    """
-    conn = POOL.get_connection()
-    cur  = conn.cursor()
+    conn = POOL.get_connection(); cur = conn.cursor()
     try:
-        yield conn, cur
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
+        yield conn, cur; conn.commit()
+    except: 
+        conn.rollback(); raise
+    finally: 
+        cur.close(); 
         conn.close()
         
 # 3. LOT 번호 발급
@@ -162,3 +140,29 @@ def update_voltage(lot: str, volt: float, result: str) -> None:
             """,
             (volt, result, lot),
         )
+
+# ─────────────────── 6 ★ LotNo 기반 UPSERT ───────────────────
+def upsert_process_log(
+    lot:str,
+    module_type:str,
+    angle:float|None=None,
+    v1:str|None=None,
+    v2:str|None=None,
+    volt:float|None=None,
+    volt_res:str|None=None,
+) -> None:
+    """존재하면 UPDATE, 없으면 INSERT 후 UPDATE"""
+    with get_conn_cursor() as (conn,cur):
+        cur.execute(
+            "INSERT IGNORE INTO module_process_log(lot_no,module_type) VALUES(%s,%s)",
+            (lot,module_type)
+        )
+        sets, vals = [], []
+        if angle is not None: sets.append("angle=%s");          vals.append(angle)
+        if v1:   sets.append("vision1_result=%s");   vals.append(v1)
+        if v2:   sets.append("vision2_result=%s");   vals.append(v2)
+        if volt is not None: sets.append("voltage=%s");         vals.append(volt)
+        if volt_res: sets.append("voltage_result=%s");          vals.append(volt_res)
+        if sets:
+            sql = f"UPDATE module_process_log SET {', '.join(sets)} WHERE lot_no=%s"
+            cur.execute(sql, (*vals, lot))

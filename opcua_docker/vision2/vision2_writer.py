@@ -1,50 +1,42 @@
-import asyncio, os, random, time
+# vision2_writer.py
+import asyncio, os, time
+from dotenv import load_dotenv
+from pymcprotocol import Type3E
 from asyncua import Client, ua
 
-# ---------- 1) 환경 설정 -----------
-UA_ENDPOINT = os.getenv(
-    "UA_ENDPOINT",
-    "opc.tcp://opcua-server:4840/inspect/server/"   # compose 네트워크에서 서비스명 사용
-)
-NS_URI      = os.getenv("UA_NAMESPACE", "http://inspect.system")
-INTERVAL    = float(os.getenv("V2_INTERVAL", 2.0))
-USE_SIM     = os.getenv("USE_SIMULATION", "true").lower() == "true"
+load_dotenv("config.env")
+PLC_IP=os.getenv("PLC_IP","192.168.3.30"); PLC_PORT=int(os.getenv("PLC_PORT","6001"))
+UA_EP=os.getenv("UA_ENDPOINT","opc.tcp://opcua-server:4840/inspect/server/")
+NS_URI=os.getenv("UA_NAMESPACE","http://inspect.system")
+POLL=0.05
 
-async def main() -> None:
-    # 1) 서버 연결 재시도 루프
+plc=Type3E(); plc.host,plc.port,plc.unit_code,plc.timeout=PLC_IP,PLC_PORT,0xFF,3
+async def plc_connect():
     while True:
-        try:
-            async with Client(UA_ENDPOINT) as cli:
-                # namespace index 확보
-                idx = await cli.get_namespace_index(NS_URI)
+        try: await asyncio.to_thread(plc.connect,PLC_IP,PLC_PORT); return
+        except: await asyncio.sleep(1)
 
-                # InspectSystem 객체 및 노드 바인딩
-                insp_obj    = await cli.nodes.objects.get_child([f"{idx}:InspectSystem"])
-                result_node = await insp_obj.get_child([f"{idx}:Vision2Result"])
-                flag_node   = await insp_obj.get_child([f"{idx}:TriggerFlag"])
+async def read_bits():
+    raw=await asyncio.to_thread(plc.batchread_bitunits,"M240",22)
+    return {f"M{240+i}":bool(raw[i]) for i in range(22)}
 
-                print(f"✅ Vision-2 writer 연결 완료 → {UA_ENDPOINT}")
+async def main():
+    await plc_connect()
+    async with Client(UA_EP) as cli:
+        idx=await cli.get_namespace_index(NS_URI)
+        insp=await cli.nodes.objects.get_child([f"{idx}:InspectSystem"])
+        v2_node  =await insp.get_child([f"{idx}:Vision2Result"])
+        flag_node=await insp.get_child([f"{idx}:TriggerFlag"])
 
-                # 2) 정상 연결되면 쓰기 루프 진입
-                while True:
-                    if USE_SIM:
-                        result = random.choice(["OK", "NG"])
-                    else:
-                        # 실제 머신 비전 처리 후 데이터 받는 코드 (자체 Vision API 혹은 OpenCV 코드로 교체)
-                        #frame = capture_frame()
-                        #angle, result = vision_inspect(frame)
-                        result = get_real_vision2()  # 예시 함수
+        prev=False
+        while True:
+            b=await read_bits(); cap=b["M261"]
+            if not prev and cap:
+                result="OK" if b["M244"] else "NG"
+                await v2_node.write_value(ua.Variant(result,ua.VariantType.String))
+                await flag_node.write_value(ua.Variant(True,ua.VariantType.Boolean))
+                print(f"[V2] {time.strftime('%H:%M:%S')}  result={result}")
+            prev=cap; await asyncio.sleep(POLL)
 
-                    await result_node.write_value(ua.Variant(result, ua.VariantType.String))
-                    await flag_node.write_value(ua.Variant(True,   ua.VariantType.Boolean))
-
-                    print(f"[Vision-2] {time.strftime('%H:%M:%S')}  result={result}")
-                    await asyncio.sleep(INTERVAL)
-        except (OSError, asyncio.TimeoutError) as e:
-            # 연결 실패 시 재시도
-            print("⚠️ Vision-2 UA 연결 실패:", e, "→ 5초 후 재시도")
-            await asyncio.sleep(5)
-
-
-if __name__ == "__main__":
+if __name__=="__main__":
     asyncio.run(main())

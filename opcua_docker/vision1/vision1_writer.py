@@ -1,59 +1,57 @@
 # vision1_writer.py
-# 비전 값 쓰기
-import asyncio, os, random, time
+import asyncio, os, time
+from dotenv import load_dotenv
+from pymcprotocol import Type3E
 from asyncua import Client, ua
 
-UA_ENDPOINT = os.getenv("UA_ENDPOINT", "opc.tcp://opcua-server:4840/inspect/server/")
-NS_URI      = os.getenv("UA_NAMESPACE", "http://inspect.system")
-INTERVAL    = float(os.getenv("V1_INTERVAL", 2.0))
-USE_SIM = os.getenv("USE_SIMULATION", "true").lower() == "true"
+# ───── 1) 설정
+load_dotenv("config.env")
+PLC_IP=os.getenv("PLC_IP","192.168.3.30"); PLC_PORT=int(os.getenv("PLC_PORT","6001"))
+UA_EP =os.getenv("UA_ENDPOINT","opc.tcp://opcua-server:4840/inspect/server/")
+NS_URI=os.getenv("UA_NAMESPACE","http://inspect.system")
+POLL  =0.05
 
+# LOT 번호 생성(내부 카운터)
+PREFIX={"2x3":"6P","2x4":"8P"}; serial={"2x3":0,"2x4":0}
+def next_lot(t): serial[t]+=1; return f"KCM-{PREFIX[t]}-{serial[t]:03d}"
+
+# ───── 2) PLC 객체
+plc=Type3E(); plc.host,plc.port,plc.unit_code,plc.timeout=PLC_IP,PLC_PORT,0xFF,3
+async def plc_connect():
+    while True:
+        try: await asyncio.to_thread(plc.connect,PLC_IP,PLC_PORT); return
+        except: await asyncio.sleep(1)
+
+async def read_bits():
+    raw=await asyncio.to_thread(plc.batchread_bitunits,"M240",22)  # M240~M261
+    return {f"M{240+i}":bool(raw[i]) for i in range(22)}
+
+# ───── 3) 메인
 async def main():
-    cli = Client(UA_ENDPOINT)
+    await plc_connect()
+    async with Client(UA_EP) as cli:
+        idx=await cli.get_namespace_index(NS_URI)
+        insp=await cli.nodes.objects.get_child([f"{idx}:InspectSystem"])
+        lot_node =await insp.get_child([f"{idx}:LotNo"])
+        ang_node =await insp.get_child([f"{idx}:Angle"])
+        v1_node  =await insp.get_child([f"{idx}:Vision1Result"])
+        flag_node=await insp.get_child([f"{idx}:TriggerFlag"])
 
-    # 1) 서버가 준비될 때까지 최대 30초 재시도
-    for i in range(30):
-        try:
-            await cli.connect()
-            print(f"✔ OPC UA 서버에 연결됨 → {UA_ENDPOINT}")
-            break
-        except OSError:
-            print(f"❗ 연결 실패, 1초 뒤 재시도… ({i+1}/30)")
-            await asyncio.sleep(1)
-    else:
-        print("❌ 서버 연결 실패, 종료합니다.")
-        return
-
-    # 2) 네임스페이스 인덱스 가져오기
-    idx = await cli.get_namespace_index(NS_URI)
-    print(f"▶ 네임스페이스 {NS_URI} 의 인덱스 = {idx}")
-
-    # 3) NodeId 문자열로 바로 변수 노드 얻기
-    angle_node  = cli.get_node(f"ns={idx};s=Angle")
-    result_node = cli.get_node(f"ns={idx};s=Vision1Result")
-    flag_node   = cli.get_node(f"ns={idx};s=TriggerFlag")
-
-    print(f"✔ Vision1 writer 준비 완료 (주기 {INTERVAL}s)")
-    
-    try:
+        prev=False
         while True:
-            if USE_SIM:
-                angle  = round(random.uniform(-5, 5), 2)
-                result = random.choice(["OK", "NG"])
-            else:
-                # 실제 머신 비전 처리 후 데이터 받는 코드 (자체 Vision API 혹은 OpenCV 코드로 교체)
-                #frame = capture_frame()
-                #angle, result = vision_inspect(frame)
-                angle, result = get_real_vision1()  # 예시 함수
+            b=await read_bits(); cap=b["M261"]
+            if not prev and cap:                      # M261 상승에지
+                mtype="2x3" if b["M240"] else "2x4"
+                angle,result = (0.0,"OK") if b["M242"] else (90.0,"NG")
+                lot=next_lot(mtype)
 
-            await angle_node.write_value( ua.Variant(angle,  ua.VariantType.Float) )
-            await result_node.write_value( ua.Variant(result, ua.VariantType.String) )
-            await flag_node.write_value(   ua.Variant(True,   ua.VariantType.Boolean) )
+                await lot_node.write_value(ua.Variant(lot,ua.VariantType.String))
+                await ang_node.write_value(ua.Variant(angle,ua.VariantType.Float))
+                await v1_node .write_value(ua.Variant(result,ua.VariantType.String))
+                await flag_node.write_value(ua.Variant(True,ua.VariantType.Boolean))
 
-            print(f"[Vision-1] {time.strftime('%H:%M:%S')}  angle={angle:+5.2f}°, result={result}")
-            await asyncio.sleep(INTERVAL)
-    finally:
-        await cli.disconnect()
+                print(f"[V1] {time.strftime('%H:%M:%S')} {lot}  angle={angle:.0f}° → {result}")
+            prev=cap; await asyncio.sleep(POLL)
 
-if __name__ == "__main__":
+if __name__=="__main__":
     asyncio.run(main())
