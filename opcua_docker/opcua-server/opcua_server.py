@@ -16,13 +16,15 @@ async def main():
     insp = await server.nodes.objects.add_object(idx, "InspectSystem")
 
     init_vars = {
-        "LotNo":        ("",   ua.VariantType.String),
-        "Angle":        (0.0,  ua.VariantType.Float),
-        "Vision1Result":("",   ua.VariantType.String),
-        "Vision2Result":("",   ua.VariantType.String),
-        "Voltage":      (0.0,  ua.VariantType.Float),
-        "VoltageResult":("",   ua.VariantType.String),
-        "TriggerFlag":  (False,ua.VariantType.Boolean),
+        "TargetOutput"  : (0,    ua.VariantType.Int32),
+        "StartFlag"     : (False, ua.VariantType.Boolean),
+        "LotNo"         : ("",   ua.VariantType.String),
+        "Angle"         : (0.0,  ua.VariantType.Float),
+        "Vision1Result" : ("",   ua.VariantType.String),
+        "Vision2Result" : ("",   ua.VariantType.String),
+        "Voltage"       : (0.0,  ua.VariantType.Float),
+        "VoltageResult" : ("",   ua.VariantType.String),
+        "TriggerFlag"   : (False,ua.VariantType.Boolean),
     }
 
     for name, (val, vtype) in init_vars.items():

@@ -15,8 +15,8 @@ services:
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
 
   opcua-server:
     build:
@@ -95,6 +95,16 @@ services:
       - opcua-server
       - opcua-bridge
     restart: "no"            # 1회 실행 후 컨테이너 정지
+
+  line-summary:
+    build:
+      context: .
+      dockerfile: line-summary/Dockerfile
+    env_file: ./config.env
+    restart: "no"
+    depends_on:
+      opcua-server:
+        condition: service_started
 
 volumes:
   db_data:
