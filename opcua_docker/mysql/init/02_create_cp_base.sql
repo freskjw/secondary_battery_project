@@ -1,6 +1,6 @@
--- 공정 능력 계산 테이블(기본)
+-- 공정 능력 기본 테이블 (변경 없음)
 CREATE TABLE IF NOT EXISTS process_capability (
-  calc_time   DATETIME    PRIMARY KEY,
+  calc_time   DATETIME PRIMARY KEY,
   module_type VARCHAR(10),
   cp_voltage  FLOAT,
   cpk_voltage FLOAT

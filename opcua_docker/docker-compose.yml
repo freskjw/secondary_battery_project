@@ -83,5 +83,18 @@ services:
       mysql:
         condition: service_healthy
 
+  simulator:
+    build:
+      context: .
+      dockerfile: simulator/Dockerfile
+    env_file: ./config.env
+    environment:
+      SIM_TARGET: "10"       # 원하는 목표 생산량
+      SIM_DELAY:  "0.3"
+    depends_on:
+      - opcua-server
+      - opcua-bridge
+    restart: "no"            # 1회 실행 후 컨테이너 정지
+
 volumes:
   db_data:
