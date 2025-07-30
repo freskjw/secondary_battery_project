@@ -92,3 +92,9 @@ def get_next_lot(stage: int) -> str | None:
         cur.execute(sql.format(cond=cond))
         row = cur.fetchone()
         return row[0] if row else None
+    
+def get_connection():
+
+#POOL 에서 커넥션 하나 꺼내서 리턴
+
+    return POOL.get_connection()

@@ -93,5 +93,20 @@ services:
       opcua-server:
         condition: service_started
 
+  pack-writer:
+    build:
+      context: .
+      dockerfile: pack-writer/Dockerfile
+    restart: unless-stopped
+    depends_on: [opcua-server, mysql]
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root2
+      - DB_PW=projectteam2@
+      - DB_NAME=secondary_battery_db
+      - CELL_CAP_mAh=1200
+      - PACK_CAP_EFF=0.95
+
 volumes:
   db_data:

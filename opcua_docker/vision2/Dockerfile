@@ -4,7 +4,7 @@ WORKDIR /app
 COPY shared/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY shared/lot_db_helper.py ./lot_db_helper.py     # ★ 추가
+COPY shared/lot_db_helper.py ./lot_db_helper.py
 COPY vision2/vision2_writer.py ./vision2_writer.py
 
 CMD ["python", "vision2_writer.py"]

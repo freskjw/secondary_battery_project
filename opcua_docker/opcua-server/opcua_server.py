@@ -25,6 +25,8 @@ async def main():
         "Voltage"       : (0.0,  ua.VariantType.Float),
         "VoltageResult" : ("",   ua.VariantType.String),
         "TriggerFlag"   : (False,ua.VariantType.Boolean),
+        "Pack6Done"     : (False, ua.VariantType.Boolean),
+        "Pack8Done"     : (False, ua.VariantType.Boolean)
     }
 
     for name, (val, vtype) in init_vars.items():
