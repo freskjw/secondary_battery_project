@@ -1,10 +1,10 @@
-#도커파일
 FROM python:3.11-slim
 WORKDIR /app
 
 COPY shared/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY vision2/vision2_writer.py .
+COPY shared/lot_db_helper.py ./lot_db_helper.py     # ★ 추가
+COPY vision2/vision2_writer.py ./vision2_writer.py
 
 CMD ["python", "vision2_writer.py"]

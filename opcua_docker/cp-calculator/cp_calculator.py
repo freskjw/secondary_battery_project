@@ -31,9 +31,9 @@ def run():
     print("▶ CP-Calculator 시작")
 
     QUERY = """
-    SELECT module_type, measure_value
-      FROM module_process_log
-     WHERE process_id='P03' AND result='OK'
+    SELECT product_type, voltage
+    FROM module
+    WHERE voltage_ok = 1
     """
 
     while True:
