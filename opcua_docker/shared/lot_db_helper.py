@@ -66,7 +66,7 @@ def update_module(lot_no: str, **updates):
     sets = ", ".join(f"{k}=%s" for k in updates.keys())
     params = list(updates.values()) + [lot_no]
     with get_conn_cursor() as (_, cur):
-        cur.execute(f"UPDATE module SET {sets} WHERE lot_no=%s", params)
+        cur.execute(f"UPDATE module_tracker SET {sets} WHERE lot_no=%s", params)
 
 
 # ────────────────────────────────────────────────────────────
@@ -81,7 +81,7 @@ def get_next_lot(stage: int) -> str | None:
         raise ValueError("stage must be 2 or 3")
 
     sql = (
-        "SELECT lot_no FROM module "
+        "SELECT lot_no FROM module_tracker "
         "WHERE {cond} ORDER BY created_at ASC LIMIT 1"
     )
     cond = ("stage1_done=1 AND stage2_done=0"
