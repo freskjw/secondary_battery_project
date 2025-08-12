@@ -1,4 +1,3 @@
--- 공정 능력 기본 테이블 (변경 없음)
 CREATE TABLE IF NOT EXISTS process_capability (
   calc_time   DATETIME PRIMARY KEY,
   module_type VARCHAR(10),

@@ -1,9 +1,10 @@
+version: "3.9"
+
 services:
   mysql:
     image: mysql:8.4
     restart: unless-stopped
-    ports:
-      - "3306:3306"
+    ports: ["3306:3306"]
     environment:
       MYSQL_ROOT_PASSWORD: "projectteam2@@"
       MYSQL_DATABASE: "secondary_battery_db"
@@ -26,13 +27,12 @@ services:
     hostname: opcua-server
     env_file: ./config.env
     restart: unless-stopped
-    ports:
-      - "4840:4840"
+    ports: ["4840:4840"]
     depends_on:
       mysql:
-        condition: service_healthy   # MySQL 컨테이너가 ‘healthcheck: OK’ 상태가 될 때까지 대기
+        condition: service_healthy
 
-  opcua-bridge:
+  opcua-bridge:     # 옵션(모니터링). 필요 없으면 꺼도 됨.
     build:
       context: .
       dockerfile: opcua-bridge/Dockerfile
@@ -40,7 +40,7 @@ services:
     env_file: ./config.env
     restart: unless-stopped
     depends_on:
-      - opcua-server              # 시작 순서만 보장.
+      - opcua-server
 
   plc-voltage:
     build:
@@ -48,6 +48,8 @@ services:
       dockerfile: plc-voltage/Dockerfile
     container_name: plc-voltage
     env_file: ./config.env
+    environment:
+      - PLC_PORT=6005
     restart: unless-stopped
     depends_on:
       - opcua-server
@@ -58,6 +60,8 @@ services:
       dockerfile: vision1/Dockerfile
     container_name: vision1-writer
     env_file: ./config.env
+    environment:
+      - PLC_PORT=6007
     restart: unless-stopped
     depends_on:
       - opcua-server
@@ -68,6 +72,8 @@ services:
       dockerfile: vision2/Dockerfile
     container_name: vision2-writer
     env_file: ./config.env
+    environment:
+      - PLC_PORT=6004
     restart: unless-stopped
     depends_on:
       - opcua-server
@@ -90,23 +96,51 @@ services:
     env_file: ./config.env
     restart: "no"
     depends_on:
-      opcua-server:
-        condition: service_started
+      mysql:
+        condition: service_healthy
 
-  pack-writer:
+  pack-batcher:     # ✅ UA 신호 대신 DB 배치로 팩 생성
     build:
       context: .
-      dockerfile: pack-writer/Dockerfile
+      dockerfile: pack-batcher/Dockerfile
+    container_name: pack-batcher
+    env_file: ./config.env
     restart: unless-stopped
-    depends_on: [opcua-server, mysql]
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  ai-reporter:
+    build: ./services/ai_reporter
+    image: opcua_docker-ai-reporter
+    container_name: ai-reporter
     environment:
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_USER=root2
-      - DB_PW=projectteam2@
-      - DB_NAME=secondary_battery_db
-      - CELL_CAP_mAh=1200
-      - PACK_CAP_EFF=0.95
+      - REPORT_RUN_AT=08:15           # KST, 매일 08:15 실행
+      - REPORT_AUDIENCES=operator,lead,manager
+      # 선택: 텔레그램 알림(요약 텍스트 전송)
+      #- TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      #- TG_CHAT_OPERATOR=${TG_CHAT_OPERATOR}
+      #- TG_CHAT_LEAD=${TG_CHAT_LEAD}
+      #- TG_CHAT_MANAGER=${TG_CHAT_MANAGER}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: always
+    env_file:
+      - config.env
+    volumes:
+      - ./reports:/reports
+
+  dummy-seeder:
+    build: ./services/dummy_seeder
+    image: opcua_docker-dummy-seeder
+    container_name: dummy-seeder
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: on-failure
+    env_file:
+      - config.env
 
 volumes:
   db_data:

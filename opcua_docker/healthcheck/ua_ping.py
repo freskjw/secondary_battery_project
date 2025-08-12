@@ -1,11 +1,6 @@
-# ────────────────────────────────
-# healthcheck/ua_ping.py
-# 서버 연결 체크
-# ────────────────────────────────
 import os
 from asyncua import Client
-import asyncio
-import sys
+import asyncio, sys
 
 UA_ENDPOINT = os.getenv("UA_ENDPOINT", "opc.tcp://opcua-server:4840/inspect/server/")
 NS_URI      = os.getenv("UA_NAMESPACE", "http://inspect.system")

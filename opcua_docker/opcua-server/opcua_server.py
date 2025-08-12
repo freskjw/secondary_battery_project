@@ -1,4 +1,4 @@
-# opcua_server.py  (FIXED)
+# opcua_server.py (v5.1)
 import asyncio, os
 from asyncua import Server, ua
 
@@ -16,17 +16,15 @@ async def main():
     insp = await server.nodes.objects.add_object(idx, "InspectSystem")
 
     init_vars = {
-        "TargetOutput"  : (0,    ua.VariantType.Int32),
+        "TargetOutput"  : (0,     ua.VariantType.Int32),
         "StartFlag"     : (False, ua.VariantType.Boolean),
-        "LotNo"         : ("",   ua.VariantType.String),
-        "Angle"         : (0.0,  ua.VariantType.Float),
-        "Vision1Result" : ("",   ua.VariantType.String),
-        "Vision2Result" : ("",   ua.VariantType.String),
-        "Voltage"       : (0.0,  ua.VariantType.Float),
-        "VoltageResult" : ("",   ua.VariantType.String),
-        "TriggerFlag"   : (False,ua.VariantType.Boolean),
-        "Pack6Done"     : (False, ua.VariantType.Boolean),
-        "Pack8Done"     : (False, ua.VariantType.Boolean)
+        "LotNo"         : ("",    ua.VariantType.String),
+        "Angle"         : (0.0,   ua.VariantType.Float),
+        "Vision1Result" : ("",    ua.VariantType.String),
+        "Vision2Result" : ("",    ua.VariantType.String),
+        "Voltage"       : (0.0,   ua.VariantType.Float),
+        "VoltageResult" : ("",    ua.VariantType.String),
+        "TriggerFlag"   : (False, ua.VariantType.Boolean),
     }
 
     for name, (val, vtype) in init_vars.items():
@@ -35,10 +33,7 @@ async def main():
         var = await insp.add_variable(nodeid, qname, ua.Variant(val, vtype))
         await var.set_writable()
 
-    print(f"✅ OPC UA 서버 기동 → {LISTEN_ENDPOINT}")
-    print(f"✅ namespace      = {NS_URI}")
-    print(f"✅ variables      = {', '.join(init_vars.keys())}")
-
+    print(f"✅ OPC UA Server @ {LISTEN_ENDPOINT}  ns={NS_URI}")
     async with server:
         while True:
             await asyncio.sleep(1)

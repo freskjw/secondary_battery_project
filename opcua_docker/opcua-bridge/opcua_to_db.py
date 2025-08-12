@@ -1,24 +1,17 @@
 """
-opcua_to_db.py  (rev.2025-07-31)
-────────────────────────────────
-OPC UA Trigger → module 테이블 stage 플래그 업데이트
-(공정 P03 = Voltage 단계만 처리, stage 플래그는 Writer들이 세팅)
+opcua_to_db.py (v5.1)
+- 현재는 TriggerFlag를 모니터링하여 콘솔에만 기록(옵션)
 """
 import asyncio, os
 from asyncua import Client
 from dotenv import load_dotenv
-from lot_db_helper import get_conn_cursor        # upsert_log 불필요
 
 load_dotenv("config.env")
 UA_EP  = os.getenv("UA_ENDPOINT",  "opc.tcp://opcua-server:4840/inspect/server/")
 NS_URI = os.getenv("UA_NAMESPACE", "http://inspect.system")
 
-LINE_ID: int | None = None          # line_run 기능 보류 – 사용 안 함
+NODE_KEYS = ["StartFlag", "TriggerFlag", "LotNo", "Voltage", "VoltageResult"]
 
-NODE_KEYS = ["StartFlag", "TriggerFlag", "LotNo",
-             "Voltage", "VoltageResult"]
-
-# ───────────────────────────────────────────────────────────
 async def run_bridge():
     while True:
         try:
@@ -29,9 +22,7 @@ async def run_bridge():
                 print("✅ OPC UA Bridge connected")
 
                 while True:
-                    # Voltage 단계 완료(TriggerFlag ↑) 를 감지해 기록만 남김
-                    trig = await nodes["TriggerFlag"].read_value()
-                    if trig:
+                    if await nodes["TriggerFlag"].read_value():
                         lot   = await nodes["LotNo"].read_value()
                         volt  = await nodes["Voltage"].read_value()
                         vres  = await nodes["VoltageResult"].read_value()
